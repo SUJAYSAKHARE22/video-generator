@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenVid AI — Autonomous Cinematic Demo Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0b0f19; }
+        .gradient-glow { background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%); }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col justify-between relative overflow-x-hidden">
+    <div class="absolute inset-0 gradient-glow pointer-events-none"></div>
+
+    <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md px-8 py-4 flex justify-between items-center z-10">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">O</div>
+            <span class="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">OpenVid AI</span>
+        </div>
+        <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">Fully Automated Editing</span>
+    </header>
+
+    <main class="flex-grow flex items-center justify-center p-6 z-10">
+        <div class="w-full max-w-xl bg-gray-900/80 border border-gray-800 rounded-2xl p-8 shadow-2xl backdrop-blur-xl">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">Turn Screen Captures into Cinematic Demos</h1>
+                <p class="text-sm text-gray-400">Upload your raw screen recording. No manual editing — the AI director analyzes your video and applies device mockups, backgrounds, zooms, and camera moves automatically.</p>
+            </div>
+
+            <form id="uploadForm" enctype="multipart/form-data" class="space-y-6">
+                <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-indigo-500 rounded-xl p-8 text-center cursor-pointer transition-all bg-gray-950/40 group">
+                    <input type="file" id="videoFile" name="video" accept="video/*" class="hidden" required />
+                    <div class="flex flex-col items-center space-y-3">
+                        <div class="p-4 bg-gray-900 rounded-xl group-hover:scale-110 transition-transform duration-300 border border-gray-800">
+                            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                        </div>
+                        <p class="text-sm font-medium text-gray-300" id="fileLabel">Drag & drop raw screen recording, or <span class="text-indigo-400 font-semibold group-hover:underline">browse</span></p>
+                        <p class="text-xs text-gray-500">Supports MP4, MOV, WebM up to 200MB</p>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/20 transition-all transform active:scale-[0.99] flex items-center justify-center space-x-3">
+                    <span>Let AI Direct & Generate Video</span>
+                </button>
+            </form>
+
+            <div id="statusContainer" class="hidden mt-8 space-y-4 pt-6 border-t border-gray-800">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-400 font-medium flex items-center" id="statusText">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        AI analyzing scenes & directing camera moves...
+                    </span>
+                    <span class="text-indigo-400 font-bold" id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+                    <div id="progressBar" class="bg-indigo-500 h-full w-0 transition-all duration-300 shadow-[0_0_12px_rgba(99,102,241,0.5)]"></div>
+                </div>
+            </div>
+
+            <div id="downloadContainer" class="hidden mt-8 pt-6 border-t border-gray-800 text-center">
+                <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-4 flex items-center justify-center space-x-3">
+                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span class="text-sm text-emerald-400 font-medium">Cinematic Video Ready!</span>
+                </div>
+                <a id="downloadBtn" href="#" download class="inline-flex items-center space-x-2 bg-gray-100 hover:bg-white text-gray-900 font-bold px-6 py-3 rounded-xl transition-all shadow-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    <span>Download Production File</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-gray-900 bg-gray-950/20 py-4 px-8 text-center text-xs text-gray-600 z-10">
+        © 2026 OpenVid AI Engine. Powered by NVIDIA NIM & MoviePy.
+    </footer>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('videoFile');
+        const fileLabel = document.getElementById('fileLabel');
+        const form = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusText = document.getElementById('statusText');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const downloadContainer = document.getElementById('downloadContainer');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        const STAGES = [
+            "AI analyzing scenes & directing camera moves...",
+            "Selecting background & device mockup style...",
+            "Choreographing zoom & pan fragments...",
+            "Rendering cinematic composite...",
+        ];
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-950/10'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/10'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/10');
+            if(e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                fileLabel.innerHTML = `Selected: <span class="text-white font-semibold">${e.dataTransfer.files[0].name}</span>`;
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if(fileInput.files.length) fileLabel.innerHTML = `Selected: <span class="text-white font-semibold">${fileInput.files[0].name}</span>`;
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!fileInput.files.length) return;
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            statusContainer.classList.remove('hidden');
+            downloadContainer.classList.add('hidden');
+
+            let progress = 0;
+            let stageIdx = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 92) {
+                    progress += Math.floor(Math.random() * 4) + 1;
+                    progressBar.style.width = `${progress}%`;
+                    progressPercent.innerText = `${progress}%`;
+                    const newStage = Math.min(STAGES.length - 1, Math.floor(progress / (100 / STAGES.length)));
+                    if (newStage !== stageIdx) {
+                        stageIdx = newStage;
+                        statusText.lastChild.textContent = STAGES[stageIdx];
+                    }
+                }
+            }, 700);
+
+            const formData = new FormData();
+            formData.append('video', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/process-video', { method: 'POST', body: formData });
+                if(!response.ok) throw new Error('Render Failed');
+
+                const blob = await response.blob();
+                const downloadUrl = URL.createObjectURL(blob);
+
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressPercent.innerText = '100%';
+
+                downloadBtn.href = downloadUrl;
+                downloadBtn.download = `openvid_ai_promo_${Date.now()}.mp4`;
+                downloadContainer.classList.remove('hidden');
+                statusContainer.classList.add('hidden');
+            } catch (err) {
+                clearInterval(progressInterval);
+                alert('Error rendering production asset. Check server logs.');
+                console.error(err);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    </script>
+</body>
+</html>
