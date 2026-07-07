@@ -7,6 +7,8 @@ import random
 import cv2
 import requests
 
+from activity_detector import detect_zoom_fragments
+
 NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 NVIDIA_MODEL = "meta/llama-3.2-11b-vision-instruct"  # free NIM vision model
 
@@ -160,6 +162,12 @@ def _sanitize_plan(raw, duration):
             last_end = f["endTime"]
         if deoverlapped:
             plan["zoomFragments"] = deoverlapped
+        # Note: this branch only fires if the caller explicitly passed
+        # zoomFragments into _sanitize_plan (e.g. tests). The live AI prompt
+        # no longer asks the model to invent zoom fragments - those come
+        # from real cursor/UI motion tracking in activity_detector.py,
+        # since a single static frame gives the model no way to know where
+        # the cursor actually moves or clicks over time.
 
     cap = raw.get("caption")
     if isinstance(cap, dict) and isinstance(cap.get("text"), str) and cap["text"].strip():
@@ -175,21 +183,16 @@ def _sanitize_plan(raw, duration):
 def _build_prompt(duration, palette_count):
     return f"""You are an automatic video editing director. You will see one sample frame from a screen-recording of a software product demo, {duration:.1f} seconds long.
 
-Decide a full cinematic edit plan, exactly as a human editor would manually configure in a screen-recording editor: a background style, a browser device mockup frame, zoom/pan camera fragments highlighting the most important UI moments, and one short caption if useful.
+Decide the visual styling for this demo: a background style, a browser device mockup frame, and one short caption if useful. (Camera zoom/pan timing is handled separately by motion analysis, not by you.)
 
 Respond with ONLY a single JSON object, no markdown, no explanation, matching exactly this schema:
 {{
   "background": {{"type": "gradient", "paletteIndex": 0-{palette_count - 1}}},
   "mockup": {{"style": "browser", "darkMode": true/false, "frameColor": "#hex", "url": "short realistic app url", "cornerRadius": 0-28, "padding": 0-14}},
-  "zoomFragments": [
-    {{"startTime": number, "endTime": number, "zoomLevel": 1-10, "speed": 1-10, "focusX": 0-100, "focusY": 0-100, "movementEnabled": true/false, "movementEndX": 0-100, "movementEndY": 0-100}}
-  ],
   "caption": {{"text": "short caption or null", "startTime": number, "endTime": number}}
 }}
 
 Rules:
-- Use 1 to 4 zoomFragments, spread across the {duration:.1f}s duration, each 1.5-4s long, never overlapping, focused on where UI action/text likely happens (top-left nav, center content, buttons on the right, etc. inferred from the frame).
-- zoomLevel 3-6 for readable close-ups of small UI text, lower for wide shots.
 - Pick colors/mockup style that visually complement the dominant colors seen in the frame.
 - caption can be null if nothing meaningful to say.
 Return ONLY the JSON object."""
@@ -198,6 +201,17 @@ Return ONLY the JSON object."""
 def get_ai_plan(video_path, duration, api_key=None):
     api_key = api_key or os.environ.get("NVIDIA_API_KEY")
     plan = _default_plan(duration)
+
+    # Real cursor/UI-activity tracking across the whole timeline - this is
+    # what decides WHERE and WHEN to zoom (clicks, cursor moving to another
+    # corner, panels opening, etc). A single static frame can never tell us
+    # this, so it's computed deterministically instead of guessed by the AI.
+    try:
+        motion_fragments = detect_zoom_fragments(video_path, duration)
+        if motion_fragments:
+            plan["zoomFragments"] = motion_fragments
+    except Exception as exc:
+        print(f"Activity/motion detection failed, using default zoom fragments: {exc}")
 
     if not api_key:
         return plan
@@ -225,7 +239,7 @@ def get_ai_plan(video_path, duration, api_key=None):
             "messages": [{"role": "user", "content": content}],
             "temperature": 0.4,
             "top_p": 1,
-            "max_tokens": 1024,
+            "max_tokens": 512,
         }
 
         resp = requests.post(NVIDIA_API_URL, headers=headers, json=payload, timeout=60)
@@ -237,9 +251,13 @@ def get_ai_plan(video_path, duration, api_key=None):
 
         match = re.search(r"\{.*\}", text, re.DOTALL)
         raw_json = json.loads(match.group(0)) if match else json.loads(text)
-        plan = _sanitize_plan(raw_json, duration)
+
+        styled_plan = _sanitize_plan(raw_json, duration)
+        # Keep the motion-based zoom fragments regardless of what the AI
+        # returned - only take background/mockup/caption from the AI.
+        styled_plan["zoomFragments"] = plan["zoomFragments"]
+        plan = styled_plan
     except Exception as exc:
-        print(f"AI planning fallback (using default plan) due to: {exc}")
-        plan = _default_plan(duration)
+        print(f"AI styling fallback (using default background/mockup) due to: {exc}")
 
     return plan
