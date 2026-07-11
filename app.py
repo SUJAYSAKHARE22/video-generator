@@ -9,6 +9,7 @@ from moviepy.editor import VideoFileClip
 
 from ai_planner import get_ai_plan
 from renderer import render_video
+from camera_config import DEFAULT_CONFIG
 
 load_dotenv()
 
@@ -50,8 +51,8 @@ def process_video():
         duration = probe_clip.duration
         probe_clip.close()
 
-        plan = get_ai_plan(input_path, duration, api_key=NVIDIA_API_KEY)
-        render_video(input_path, output_path, plan)
+        plan = get_ai_plan(input_path, duration, api_key=NVIDIA_API_KEY, config=DEFAULT_CONFIG)
+        render_video(input_path, output_path, plan, config=DEFAULT_CONFIG)
 
         return send_file(output_path, as_attachment=True, download_name=f"cinematic_promo_{job_id}.mp4")
 
@@ -77,7 +78,7 @@ def plan_preview():
         clip = VideoFileClip(tmp_path)
         duration = clip.duration
         clip.close()
-        plan = get_ai_plan(tmp_path, duration, api_key=NVIDIA_API_KEY)
+        plan = get_ai_plan(tmp_path, duration, api_key=NVIDIA_API_KEY, config=DEFAULT_CONFIG)
         return jsonify(plan)
     finally:
         if os.path.exists(tmp_path):

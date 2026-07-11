@@ -1,3 +1,16 @@
+"""
+ai_planner.py
+--------------
+Top-level entry point used by app.py. Produces the complete render plan:
+  - visual styling (background palette, device mockup, optional caption)
+  - the full cinematic camera segment timeline (delegated to motion_planner,
+    which is where the real "director" AI + signal analysis lives)
+
+Kept as a thin orchestrator so app.py's interface (`get_ai_plan`) doesn't
+need to change even though the camera planning system underneath it was
+completely redesigned.
+"""
+
 import os
 import json
 import base64
@@ -7,7 +20,8 @@ import random
 import cv2
 import requests
 
-from activity_detector import detect_zoom_fragments
+from camera_config import DEFAULT_CONFIG
+from motion_planner import build_camera_plan
 
 NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 NVIDIA_MODEL = "meta/llama-3.2-11b-vision-instruct"  # free NIM vision model
@@ -39,80 +53,54 @@ def _clamp(v, lo, hi, default):
     return max(lo, min(hi, v))
 
 
-def _extract_frames_b64(video_path, count=1, max_side=512, quality=55):
-    """Extracts a small number of frames and keeps each base64 payload small.
-    The hosted NVIDIA catalog endpoint for this vision model only reliably
-    accepts a single, small (<180KB base64) image per request - sending
-    multiple/large images causes a 400 Bad Request."""
+def _extract_style_frame_b64(video_path, max_side=512, quality=55):
     cap = cv2.VideoCapture(video_path)
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
-    frames = []
-    for i in range(count):
-        idx = int(total * (i + 0.5) / count)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, min(idx, max(total - 1, 0)))
-        ok, frame = cap.read()
-        if not ok:
-            continue
-        h, w = frame.shape[:2]
-        scale = max_side / max(h, w)
-        if scale < 1:
-            frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
-
-        q = quality
-        for _ in range(5):
-            ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), q])
-            if ok and len(buf) * 4 / 3 < 170_000:
-                break
-            q = max(20, q - 10)
-        if ok:
-            frames.append(base64.b64encode(buf.tobytes()).decode("utf-8"))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, min(int(total * 0.5), max(total - 1, 0)))
+    ok, frame = cap.read()
     cap.release()
-    return frames
+    if not ok:
+        return None
+    h, w = frame.shape[:2]
+    scale = max_side / max(h, w)
+    if scale < 1:
+        frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
+    q = quality
+    for _ in range(5):
+        ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), q])
+        if ok and len(buf) * 4 / 3 < 170_000:
+            break
+        q = max(20, q - 10)
+    return base64.b64encode(buf.tobytes()).decode("utf-8") if ok else None
 
 
-def _default_plan(duration):
-    frag_len = min(2.2, duration / 3 if duration > 0 else 2.0)
-    fragments = []
-    if duration > 4:
-        s1 = max(0.3, duration * 0.18)
-        fragments.append({
-            "startTime": round(s1, 2), "endTime": round(min(s1 + frag_len, duration - 0.2), 2),
-            "zoomLevel": 4, "speed": 5, "focusX": 50, "focusY": 35,
-            "movementEnabled": False, "movementEndX": 50, "movementEndY": 35,
-        })
-        s2 = max(0.3, duration * 0.62)
-        fragments.append({
-            "startTime": round(s2, 2), "endTime": round(min(s2 + frag_len, duration - 0.2), 2),
-            "zoomLevel": 3, "speed": 5, "focusX": 65, "focusY": 55,
-            "movementEnabled": True, "movementEndX": 40, "movementEndY": 50,
-        })
+def _default_style(duration):
     return {
         "background": {"type": "gradient", "paletteIndex": random.randint(0, len(PALETTES) - 1)},
         "mockup": {
             "style": "browser", "darkMode": True, "frameColor": FRAME_COLORS_DARK[0],
             "url": "app.yourproduct.com", "cornerRadius": 14, "padding": 6,
         },
-        "zoomFragments": fragments,
         "caption": None,
     }
 
 
-def _sanitize_plan(raw, duration):
-    plan = _default_plan(duration)
+def _sanitize_style(raw, duration):
+    style = _default_style(duration)
     if not isinstance(raw, dict):
-        return plan
+        return style
 
     bg = raw.get("background")
     if isinstance(bg, dict):
         if bg.get("type") == "solid" and isinstance(bg.get("color"), str) and re.match(r"^#[0-9a-fA-F]{6}$", bg["color"]):
-            plan["background"] = {"type": "solid", "color": bg["color"]}
+            style["background"] = {"type": "solid", "color": bg["color"]}
         else:
             idx = bg.get("paletteIndex", 0)
             try:
                 idx = int(idx) % len(PALETTES)
             except (TypeError, ValueError):
                 idx = 0
-            plan["background"] = {"type": "gradient", "paletteIndex": idx}
+            style["background"] = {"type": "gradient", "paletteIndex": idx}
 
     mk = raw.get("mockup")
     if isinstance(mk, dict):
@@ -120,7 +108,7 @@ def _sanitize_plan(raw, duration):
         frame_color = mk.get("frameColor")
         if not (isinstance(frame_color, str) and re.match(r"^#[0-9a-fA-F]{6}$", frame_color)):
             frame_color = FRAME_COLORS_DARK[0] if dark else FRAME_COLORS_LIGHT[0]
-        plan["mockup"] = {
+        style["mockup"] = {
             "style": mk.get("style", "browser") if mk.get("style") in ("browser", "minimal", "none") else "browser",
             "darkMode": dark,
             "frameColor": frame_color,
@@ -129,61 +117,21 @@ def _sanitize_plan(raw, duration):
             "padding": int(_clamp(mk.get("padding", 6), 0, 14, 6)),
         }
 
-    frags = raw.get("zoomFragments")
-    if isinstance(frags, list) and frags:
-        clean = []
-        for f in frags[:6]:
-            if not isinstance(f, dict):
-                continue
-            st = _clamp(f.get("startTime", 0), 0, max(duration - 0.5, 0), 0)
-            et = _clamp(f.get("endTime", st + 2), st + 0.4, duration, min(st + 2, duration))
-            if et <= st:
-                continue
-            clean.append({
-                "startTime": round(st, 2),
-                "endTime": round(et, 2),
-                "zoomLevel": int(_clamp(f.get("zoomLevel", 3), 1, 10, 3)),
-                "speed": int(_clamp(f.get("speed", 5), 1, 10, 5)),
-                "focusX": int(_clamp(f.get("focusX", 50), 0, 100, 50)),
-                "focusY": int(_clamp(f.get("focusY", 50), 0, 100, 50)),
-                "movementEnabled": bool(f.get("movementEnabled", False)),
-                "movementEndX": int(_clamp(f.get("movementEndX", 50), 0, 100, 50)),
-                "movementEndY": int(_clamp(f.get("movementEndY", 50), 0, 100, 50)),
-            })
-        clean.sort(key=lambda x: x["startTime"])
-        deoverlapped = []
-        last_end = 0
-        for f in clean:
-            if f["startTime"] < last_end:
-                f["startTime"] = last_end + 0.1
-            if f["endTime"] <= f["startTime"]:
-                continue
-            deoverlapped.append(f)
-            last_end = f["endTime"]
-        if deoverlapped:
-            plan["zoomFragments"] = deoverlapped
-        # Note: this branch only fires if the caller explicitly passed
-        # zoomFragments into _sanitize_plan (e.g. tests). The live AI prompt
-        # no longer asks the model to invent zoom fragments - those come
-        # from real cursor/UI motion tracking in activity_detector.py,
-        # since a single static frame gives the model no way to know where
-        # the cursor actually moves or clicks over time.
-
     cap = raw.get("caption")
     if isinstance(cap, dict) and isinstance(cap.get("text"), str) and cap["text"].strip():
         st = _clamp(cap.get("startTime", 0), 0, max(duration - 0.5, 0), 0)
         et = _clamp(cap.get("endTime", st + 3), st + 0.5, duration, min(st + 3, duration))
-        plan["caption"] = {"text": cap["text"].strip()[:90], "startTime": round(st, 2), "endTime": round(et, 2)}
+        style["caption"] = {"text": cap["text"].strip()[:90], "startTime": round(st, 2), "endTime": round(et, 2)}
     else:
-        plan["caption"] = None
+        style["caption"] = None
 
-    return plan
+    return style
 
 
-def _build_prompt(duration, palette_count):
+def _build_style_prompt(duration, palette_count):
     return f"""You are an automatic video editing director. You will see one sample frame from a screen-recording of a software product demo, {duration:.1f} seconds long.
 
-Decide the visual styling for this demo: a background style, a browser device mockup frame, and one short caption if useful. (Camera zoom/pan timing is handled separately by motion analysis, not by you.)
+Decide the visual styling for this demo: a background style, a browser device mockup frame, and one short caption if useful. (Camera zoom/pan timing is handled separately by a dedicated motion-planning system, not by you.)
 
 Respond with ONLY a single JSON object, no markdown, no explanation, matching exactly this schema:
 {{
@@ -198,23 +146,10 @@ Rules:
 Return ONLY the JSON object."""
 
 
-def get_ai_plan(video_path, duration, api_key=None):
-    api_key = api_key or os.environ.get("NVIDIA_API_KEY")
-    plan = _default_plan(duration)
-
-    # Real cursor/UI-activity tracking across the whole timeline - this is
-    # what decides WHERE and WHEN to zoom (clicks, cursor moving to another
-    # corner, panels opening, etc). A single static frame can never tell us
-    # this, so it's computed deterministically instead of guessed by the AI.
-    try:
-        motion_fragments = detect_zoom_fragments(video_path, duration)
-        if motion_fragments:
-            plan["zoomFragments"] = motion_fragments
-    except Exception as exc:
-        print(f"Activity/motion detection failed, using default zoom fragments: {exc}")
-
+def get_ai_style(video_path, duration, api_key=None):
+    style = _default_style(duration)
     if not api_key:
-        return plan
+        return style
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -223,13 +158,13 @@ def get_ai_plan(video_path, duration, api_key=None):
     }
 
     try:
-        frames_b64 = _extract_frames_b64(video_path, count=1)
-        prompt_text = _build_prompt(duration, len(PALETTES))
+        frame_b64 = _extract_style_frame_b64(video_path)
+        prompt_text = _build_style_prompt(duration, len(PALETTES))
 
-        if frames_b64:
+        if frame_b64:
             content = [
                 {"type": "text", "text": prompt_text},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{frames_b64[0]}"}},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{frame_b64}"}},
             ]
         else:
             content = prompt_text
@@ -244,20 +179,50 @@ def get_ai_plan(video_path, duration, api_key=None):
 
         resp = requests.post(NVIDIA_API_URL, headers=headers, json=payload, timeout=60)
         if not resp.ok:
-            print(f"NVIDIA NIM error {resp.status_code}: {resp.text[:2000]}")
+            print(f"NVIDIA NIM style error {resp.status_code}: {resp.text[:2000]}")
         resp.raise_for_status()
         data = resp.json()
         text = data["choices"][0]["message"]["content"]
 
         match = re.search(r"\{.*\}", text, re.DOTALL)
         raw_json = json.loads(match.group(0)) if match else json.loads(text)
-
-        styled_plan = _sanitize_plan(raw_json, duration)
-        # Keep the motion-based zoom fragments regardless of what the AI
-        # returned - only take background/mockup/caption from the AI.
-        styled_plan["zoomFragments"] = plan["zoomFragments"]
-        plan = styled_plan
+        style = _sanitize_style(raw_json, duration)
     except Exception as exc:
         print(f"AI styling fallback (using default background/mockup) due to: {exc}")
 
+    return style
+
+
+def get_ai_plan(video_path, duration, api_key=None, config=DEFAULT_CONFIG):
+    """Builds the complete render plan: visual styling + the cinematic
+    camera segment timeline produced by the redesigned motion-planning
+    pipeline (cursor tracking + scene understanding + AI director +
+    stability guards)."""
+    api_key = api_key or os.environ.get("NVIDIA_API_KEY")
+
+    style = get_ai_style(video_path, duration, api_key=api_key)
+
+    try:
+        camera = build_camera_plan(video_path, duration, api_key=api_key, config=config)
+    except Exception as exc:
+        print(f"Camera motion planning failed entirely, falling back to a single static segment: {exc}")
+        camera = {
+            "segments": [{
+                "startTime": 0, "endTime": duration or 1.0, "action": "static",
+                "focusX": 50, "focusY": 50, "movementEnabled": False,
+                "movementEndX": 50, "movementEndY": 50, "zoomLevel": 1.0,
+                "panDirection": "none", "easing": config.default_easing,
+                "transitionType": "hold", "importance": 0.0, "confidence": 0.0,
+                "reasoning": "planning pipeline error fallback", "source": "error_fallback",
+            }],
+            "meta": {"totalEvents": 0, "batches": 0, "aiUsed": False},
+        }
+
+    plan = {
+        "background": style["background"],
+        "mockup": style["mockup"],
+        "caption": style["caption"],
+        "segments": camera["segments"],
+        "planningMeta": camera["meta"],
+    }
     return plan

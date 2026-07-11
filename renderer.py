@@ -3,71 +3,10 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from moviepy.editor import VideoClip, VideoFileClip
 
 from ai_planner import PALETTES
+from camera_config import DEFAULT_CONFIG
+from camera_engine import compute_camera_state
 
 TARGET_W, TARGET_H = 1920, 1080
-MIN_ZOOM, MAX_ZOOM = 1.2, 4.0
-
-
-def zoom_level_to_factor(level):
-    normalized = (level - 1) / 9
-    return MIN_ZOOM + (MAX_ZOOM - MIN_ZOOM) * normalized
-
-
-def speed_to_transition_s(speed):
-    min_ms, max_ms = 150, 2000
-    normalized = (speed - 1) / 9
-    return (max_ms - (max_ms - min_ms) * normalized) / 1000.0
-
-
-def ease_out_quart(t):
-    return 1 - (1 - t) ** 4
-
-
-def ease_in_out_quart(t):
-    if t < 0.5:
-        return 8 * t ** 4
-    return 1 - ((-2 * t + 2) ** 4) / 2
-
-
-def compute_zoom_state(fragments, t):
-    """Ported from openvid's calculateZoomPhaseState (2D subset)."""
-    for frag in fragments:
-        start, end = frag["startTime"], frag["endTime"]
-        if not (start <= t <= end):
-            continue
-
-        total = end - start
-        target_scale = zoom_level_to_factor(frag["zoomLevel"])
-        transition = speed_to_transition_s(frag["speed"])
-        entry_end = start + transition
-        exit_start = end - transition
-        hold_duration = max(0.0, exit_start - entry_end)
-
-        focus_x, focus_y = frag["focusX"], frag["focusY"]
-        move_end_x = frag.get("movementEndX", focus_x)
-        move_end_y = frag.get("movementEndY", focus_y)
-
-        if t < entry_end and transition > 0:
-            progress = max(0.0, min(1.0, (t - start) / transition))
-            eased = ease_out_quart(progress)
-            scale = 1 + (target_scale - 1) * eased
-        elif t >= exit_start and transition > 0:
-            progress = max(0.0, min(1.0, (t - exit_start) / transition))
-            eased = ease_out_quart(progress)
-            scale = target_scale - (target_scale - 1) * eased
-            if frag.get("movementEnabled"):
-                focus_x, focus_y = move_end_x, move_end_y
-        else:
-            scale = target_scale
-            if frag.get("movementEnabled") and hold_duration > 0:
-                move_progress = max(0.0, min(1.0, (t - entry_end) / hold_duration))
-                eased = ease_in_out_quart(move_progress)
-                focus_x = frag["focusX"] + (move_end_x - frag["focusX"]) * eased
-                focus_y = frag["focusY"] + (move_end_y - frag["focusY"]) * eased
-
-        return scale, focus_x, focus_y
-
-    return 1.0, 50.0, 50.0
 
 
 def hex_to_rgb(h):
@@ -189,6 +128,7 @@ class Shell:
 
 def _zoom_crop(frame_rgb, scale, focus_x_pct, focus_y_pct):
     h, w = frame_rgb.shape[:2]
+    scale = max(scale, 1.0)
     crop_w, crop_h = w / scale, h / scale
     cx, cy = w * focus_x_pct / 100.0, h * focus_y_pct / 100.0
     x0 = min(max(cx - crop_w / 2, 0), w - crop_w)
@@ -198,13 +138,13 @@ def _zoom_crop(frame_rgb, scale, focus_x_pct, focus_y_pct):
     return img
 
 
-def render_video(input_path, output_path, plan, progress_callback=None):
+def render_video(input_path, output_path, plan, progress_callback=None, config=DEFAULT_CONFIG):
     raw_clip = VideoFileClip(input_path)
     duration = raw_clip.duration
     video_w, video_h = raw_clip.size
 
     shell = Shell(plan, video_w, video_h)
-    fragments = plan["zoomFragments"]
+    segments = plan.get("segments", [])
     caption = plan.get("caption")
     cx, cy, cw, ch = shell.content_rect
     content_mask = rounded_mask(cw, ch, shell.content_radius, shell.content_corners)
@@ -213,7 +153,7 @@ def render_video(input_path, output_path, plan, progress_callback=None):
     def make_frame(t):
         t = min(t, max(duration - 1e-3, 0))
         raw_frame = raw_clip.get_frame(t)
-        scale, fx, fy = compute_zoom_state(fragments, t)
+        scale, fx, fy = compute_camera_state(segments, t, config)
 
         cropped = _zoom_crop(raw_frame, scale, fx, fy).resize((cw, ch), Image.LANCZOS)
 
