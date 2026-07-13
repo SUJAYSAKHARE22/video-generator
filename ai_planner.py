@@ -4,11 +4,14 @@ ai_planner.py
 Top-level entry point used by app.py. Produces the complete render plan:
   - visual styling (background palette, device mockup, optional caption)
   - the full cinematic camera segment timeline (delegated to motion_planner,
-    which is where the real "director" AI + signal analysis lives)
+    which owns the real cursor-kinematics + two-stage AI director pipeline)
 
 Kept as a thin orchestrator so app.py's interface (`get_ai_plan`) doesn't
-need to change even though the camera planning system underneath it was
-completely redesigned.
+change even though the camera planning system underneath it was redesigned.
+The styling call now also receives a short activity summary from the
+camera plan's own meta so the caption/background choice can react to what
+actually happens in THIS video (e.g. "lots of clicks" vs "mostly static")
+instead of being decided independently of it.
 """
 
 import os
@@ -24,7 +27,7 @@ from camera_config import DEFAULT_CONFIG
 from motion_planner import build_camera_plan
 
 NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-NVIDIA_MODEL = "meta/llama-3.2-11b-vision-instruct"  # free NIM vision model
+NVIDIA_VISION_MODEL = "meta/llama-3.2-11b-vision-instruct"
 
 PALETTES = [
     [{"color": "#FFFBFD", "position": 0}, {"color": "#FFE5F5", "position": 33}, {"color": "#F769EA", "position": 66}, {"color": "#4A1C9B", "position": 100}],
@@ -128,8 +131,9 @@ def _sanitize_style(raw, duration):
     return style
 
 
-def _build_style_prompt(duration, palette_count):
+def _build_style_prompt(duration, palette_count, activity_hint):
     return f"""You are an automatic video editing director. You will see one sample frame from a screen-recording of a software product demo, {duration:.1f} seconds long.
+Activity detected across the whole recording: {activity_hint}
 
 Decide the visual styling for this demo: a background style, a browser device mockup frame, and one short caption if useful. (Camera zoom/pan timing is handled separately by a dedicated motion-planning system, not by you.)
 
@@ -142,11 +146,11 @@ Respond with ONLY a single JSON object, no markdown, no explanation, matching ex
 
 Rules:
 - Pick colors/mockup style that visually complement the dominant colors seen in the frame.
-- caption can be null if nothing meaningful to say.
+- caption can be null if nothing meaningful to say; if you do write one, let it reflect the actual detected activity rather than a generic line.
 Return ONLY the JSON object."""
 
 
-def get_ai_style(video_path, duration, api_key=None):
+def get_ai_style(video_path, duration, api_key=None, activity_hint="unknown"):
     style = _default_style(duration)
     if not api_key:
         return style
@@ -159,7 +163,7 @@ def get_ai_style(video_path, duration, api_key=None):
 
     try:
         frame_b64 = _extract_style_frame_b64(video_path)
-        prompt_text = _build_style_prompt(duration, len(PALETTES))
+        prompt_text = _build_style_prompt(duration, len(PALETTES), activity_hint)
 
         if frame_b64:
             content = [
@@ -170,7 +174,7 @@ def get_ai_style(video_path, duration, api_key=None):
             content = prompt_text
 
         payload = {
-            "model": NVIDIA_MODEL,
+            "model": NVIDIA_VISION_MODEL,
             "messages": [{"role": "user", "content": content}],
             "temperature": 0.4,
             "top_p": 1,
@@ -194,13 +198,11 @@ def get_ai_style(video_path, duration, api_key=None):
 
 
 def get_ai_plan(video_path, duration, api_key=None, config=DEFAULT_CONFIG):
-    """Builds the complete render plan: visual styling + the cinematic
-    camera segment timeline produced by the redesigned motion-planning
-    pipeline (cursor tracking + scene understanding + AI director +
-    stability guards)."""
+    """Builds the complete render plan: the cinematic camera segment
+    timeline (real cursor kinematics + two-stage AI director + stability
+    guards) plus visual styling that reacts to what the camera plan
+    actually found in this specific video."""
     api_key = api_key or os.environ.get("NVIDIA_API_KEY")
-
-    style = get_ai_style(video_path, duration, api_key=api_key)
 
     try:
         camera = build_camera_plan(video_path, duration, api_key=api_key, config=config)
@@ -215,14 +217,21 @@ def get_ai_plan(video_path, duration, api_key=None, config=DEFAULT_CONFIG):
                 "transitionType": "hold", "importance": 0.0, "confidence": 0.0,
                 "reasoning": "planning pipeline error fallback", "source": "error_fallback",
             }],
-            "meta": {"totalEvents": 0, "batches": 0, "aiUsed": False},
+            "meta": {"totalEvents": 0, "eventTypes": [], "batches": 0, "aiUsed": False},
         }
+
+    meta = camera.get("meta", {})
+    activity_hint = (
+        f"{meta.get('totalEvents', 0)} cursor/UI events detected "
+        f"(types: {', '.join(meta.get('eventTypes', [])) or 'none'})"
+    )
+    style = get_ai_style(video_path, duration, api_key=api_key, activity_hint=activity_hint)
 
     plan = {
         "background": style["background"],
         "mockup": style["mockup"],
         "caption": style["caption"],
         "segments": camera["segments"],
-        "planningMeta": camera["meta"],
+        "planningMeta": meta,
     }
     return plan
