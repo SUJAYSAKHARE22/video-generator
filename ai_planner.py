@@ -235,3 +235,21 @@ def get_ai_plan(video_path, duration, api_key=None, config=DEFAULT_CONFIG):
         "planningMeta": meta,
     }
     return plan
+
+
+def regenerate_style_with_narrative(video_path, duration, narrative: dict, api_key=None):
+    """Human-in-the-loop restyle: re-runs ONLY the visual-styling call
+    (background/mockup/caption), factoring in narrative intent a human
+    supplies - target audience, tone, pacing preference - that the AI has
+    no way to infer from pixels/cursor signals alone. Does not touch the
+    camera segment timeline; combine with per-segment overrides
+    (`Clip.set_segment_override`) for full "Edit More" control."""
+    api_key = api_key or os.environ.get("NVIDIA_API_KEY")
+    audience = narrative.get("audience", "general software users")
+    tone = narrative.get("tone", "professional")
+    pacing = narrative.get("pacing", "moderate")
+    activity_hint = (
+        f"Human-specified narrative intent - audience: {audience}; tone: {tone}; "
+        f"pacing preference: {pacing}. Reflect this intent in the styling/caption choice."
+    )
+    return get_ai_style(video_path, duration, api_key=api_key, activity_hint=activity_hint)
