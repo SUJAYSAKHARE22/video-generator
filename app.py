@@ -6,12 +6,13 @@ import uuid
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, send_file, abort, jsonify
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import HTTPException
 from moviepy.editor import VideoFileClip
 
 from ai_planner import get_ai_plan, regenerate_style_with_narrative
 from renderer import render_video
 from camera_config import DEFAULT_CONFIG
-from promo_generator import build_promo_video
+from promo_generator import build_promo_video, check_model_availability
 from metrics_engine import compute_camera_metrics, compute_processing_metrics, compute_cross_video_diversity
 from project_model import (
     Project, Effect, TextOverlay, AudioTrack, EXPORT_PRESETS,
@@ -147,9 +148,14 @@ def generate_promo():
             max_frames=max_frames, title_text=title_text, config=DEFAULT_CONFIG,
         )
         if result is None:
-            return abort(502, "Promo generation unavailable this run (no key frames generated). "
-                              "The full cinematic demo endpoint (/process-video) is unaffected.")
+            return abort(502, "No configured video-generation model accepted a request on this "
+                              "NVIDIA account. Call GET /promo/check-models to see the exact status "
+                              "for each candidate model, then set NVIDIA_VIDEO_GEN_MODELS to whichever "
+                              "one returns 200/202 for your account. The full cinematic demo endpoint "
+                              "(/process-video) is unaffected either way.")
         return send_file(result, as_attachment=True, download_name=f"promo_{job_id}.mp4")
+    except HTTPException:
+        raise  # don't let an intentional abort() get re-wrapped as a 500 below
     except Exception as e:
         print(f"Promo generation failure: {str(e)}")
         return abort(500, f"Promo generation crash details: {str(e)}")
@@ -159,6 +165,20 @@ def generate_promo():
                 os.remove(input_path)
             except OSError:
                 pass
+
+
+@app.route('/promo/check-models', methods=['GET'])
+def check_promo_models():
+    """Diagnostic: sends a tiny throwaway request to each configured
+    candidate video-generation model and reports the raw status/response
+    for each - no polling, no video is generated. NVIDIA's free-tier model
+    catalog changes over time and varies per account, so this lets you
+    find out directly which model (if any) is actually callable on YOUR
+    account instead of guessing. Point NVIDIA_VIDEO_GEN_MODELS at whichever
+    one comes back 200/202."""
+    if not NVIDIA_API_KEY:
+        return jsonify({"error": "NVIDIA_API_KEY is not set."}), 400
+    return jsonify(check_model_availability(NVIDIA_API_KEY))
 
 
 # ---------------------------------------------------------------------------

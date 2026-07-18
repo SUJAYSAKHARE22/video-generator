@@ -1,168 +1,760 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenVid AI — Autonomous Cinematic Demo Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0b0f19; }
-        .gradient-glow { background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenVid AI — Hybrid Cinematic Editor</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0b0f19; }
+    .gradient-glow { background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%); }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 8px; }
+    .tab-btn.active { background: rgba(99,102,241,0.15); color: #a5b4fc; border-color: rgba(99,102,241,0.4); }
+    .seg-card.ai { border-left: 3px solid #6366f1; }
+    .seg-card.heuristic { border-left: 3px solid #f59e0b; }
+    .seg-card.edited { border-left: 3px solid #10b981; }
+</style>
 </head>
-<body class="text-gray-100 min-h-screen flex flex-col justify-between relative overflow-x-hidden">
-    <div class="absolute inset-0 gradient-glow pointer-events-none"></div>
+<body class="text-gray-100 min-h-screen flex flex-col relative overflow-x-hidden">
+<div class="absolute inset-0 gradient-glow pointer-events-none"></div>
 
-    <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md px-8 py-4 flex justify-between items-center z-10">
-        <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">O</div>
-            <span class="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">OpenVid AI</span>
-        </div>
-        <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">Fully Automated Editing</span>
-    </header>
+<header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md px-8 py-4 flex justify-between items-center z-10">
+    <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">O</div>
+        <span class="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">OpenVid AI</span>
+    </div>
+    <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">Hybrid Human + AI Editing</span>
+</header>
 
-    <main class="flex-grow flex items-center justify-center p-6 z-10">
-        <div class="w-full max-w-xl bg-gray-900/80 border border-gray-800 rounded-2xl p-8 shadow-2xl backdrop-blur-xl">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">Turn Screen Captures into Cinematic Demos</h1>
-                <p class="text-sm text-gray-400">Upload your raw screen recording. No manual editing — the AI director analyzes your video and applies device mockups, backgrounds, zooms, and camera moves automatically.</p>
-            </div>
+<main class="flex-grow flex items-start justify-center p-6 z-10">
 
-            <form id="uploadForm" enctype="multipart/form-data" class="space-y-6">
-                <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-indigo-500 rounded-xl p-8 text-center cursor-pointer transition-all bg-gray-950/40 group">
-                    <input type="file" id="videoFile" name="video" accept="video/*" class="hidden" required />
-                    <div class="flex flex-col items-center space-y-3">
-                        <div class="p-4 bg-gray-900 rounded-xl group-hover:scale-110 transition-transform duration-300 border border-gray-800">
-                            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                        </div>
-                        <p class="text-sm font-medium text-gray-300" id="fileLabel">Drag & drop raw screen recording, or <span class="text-indigo-400 font-semibold group-hover:underline">browse</span></p>
-                        <p class="text-xs text-gray-500">Supports MP4, MOV, WebM up to 200MB</p>
-                    </div>
+<!-- ===================== STAGE 1: UPLOAD ===================== -->
+<div id="uploadStage" class="w-full max-w-xl mx-auto mt-10 bg-gray-900/80 border border-gray-800 rounded-2xl p-8 shadow-2xl backdrop-blur-xl">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">Turn Screen Captures into Cinematic Demos</h1>
+        <p class="text-sm text-gray-400">Upload your raw screen recording. The AI director analyzes it and applies device mockups, backgrounds, zooms, and camera moves automatically — then you decide: keep it, or refine any decision yourself.</p>
+    </div>
+
+    <form id="uploadForm" class="space-y-6">
+        <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-indigo-500 rounded-xl p-8 text-center cursor-pointer transition-all bg-gray-950/40 group">
+            <input type="file" id="videoFile" accept="video/*" class="hidden" required />
+            <div class="flex flex-col items-center space-y-3">
+                <div class="p-4 bg-gray-900 rounded-xl group-hover:scale-110 transition-transform duration-300 border border-gray-800">
+                    <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                 </div>
-
-                <button type="submit" id="submitBtn" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/20 transition-all transform active:scale-[0.99] flex items-center justify-center space-x-3">
-                    <span>Let AI Direct & Generate Video</span>
-                </button>
-            </form>
-
-            <div id="statusContainer" class="hidden mt-8 space-y-4 pt-6 border-t border-gray-800">
-                <div class="flex justify-between items-center text-sm">
-                    <span class="text-gray-400 font-medium flex items-center" id="statusText">
-                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        AI analyzing scenes & directing camera moves...
-                    </span>
-                    <span class="text-indigo-400 font-bold" id="progressPercent">0%</span>
-                </div>
-                <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
-                    <div id="progressBar" class="bg-indigo-500 h-full w-0 transition-all duration-300 shadow-[0_0_12px_rgba(99,102,241,0.5)]"></div>
-                </div>
-            </div>
-
-            <div id="downloadContainer" class="hidden mt-8 pt-6 border-t border-gray-800 text-center">
-                <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-4 flex items-center justify-center space-x-3">
-                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span class="text-sm text-emerald-400 font-medium">Cinematic Video Ready!</span>
-                </div>
-                <a id="downloadBtn" href="#" download class="inline-flex items-center space-x-2 bg-gray-100 hover:bg-white text-gray-900 font-bold px-6 py-3 rounded-xl transition-all shadow-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    <span>Download Production File</span>
-                </a>
+                <p class="text-sm font-medium text-gray-300" id="fileLabel">Drag & drop raw screen recording, or <span class="text-indigo-400 font-semibold group-hover:underline">browse</span></p>
+                <p class="text-xs text-gray-500">Supports MP4, MOV, WebM up to 300MB</p>
             </div>
         </div>
-    </main>
 
-    <footer class="border-t border-gray-900 bg-gray-950/20 py-4 px-8 text-center text-xs text-gray-600 z-10">
-        © 2026 OpenVid AI Engine. Powered by NVIDIA NIM & MoviePy.
-    </footer>
+        <button type="submit" id="submitBtn" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/20 transition-all transform active:scale-[0.99]">
+            Let AI Direct This Video
+        </button>
+    </form>
 
-    <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('videoFile');
-        const fileLabel = document.getElementById('fileLabel');
-        const form = document.getElementById('uploadForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const statusContainer = document.getElementById('statusContainer');
-        const statusText = document.getElementById('statusText');
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
-        const downloadContainer = document.getElementById('downloadContainer');
-        const downloadBtn = document.getElementById('downloadBtn');
+    <div id="statusContainer" class="hidden mt-8 space-y-4 pt-6 border-t border-gray-800">
+        <div class="flex justify-between items-center text-sm">
+            <span class="text-gray-400 font-medium flex items-center" id="statusText">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                AI analyzing scenes & directing camera moves...
+            </span>
+        </div>
+        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+            <div id="progressBar" class="bg-indigo-500 h-full w-full animate-pulse"></div>
+        </div>
+    </div>
+</div>
 
-        const STAGES = [
-            "AI analyzing scenes & directing camera moves...",
-            "Selecting background & device mockup style...",
-            "Choreographing zoom & pan fragments...",
-            "Rendering cinematic composite...",
-        ];
+<!-- ===================== STAGE 2: DECISION (accept vs edit more) ===================== -->
+<div id="decisionStage" class="hidden w-full max-w-xl mx-auto mt-10 bg-gray-900/80 border border-gray-800 rounded-2xl p-8 shadow-2xl backdrop-blur-xl text-center">
+    <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-6">
+        <p class="text-sm text-emerald-400 font-medium">AI direction complete</p>
+        <p class="text-xs text-gray-400 mt-1" id="planSummary">—</p>
+    </div>
+    <h2 class="text-xl font-bold mb-2">Happy with the AI's camera work?</h2>
+    <p class="text-sm text-gray-400 mb-6">You can download it as-is, or open the editor to review and change any individual camera decision, add text/music/filters, trim, or bring in another clip.</p>
+    <div class="flex gap-4">
+        <button id="acceptBtn" class="flex-1 py-3 bg-gray-100 hover:bg-white text-gray-900 font-bold rounded-xl transition-all">Download As-Is</button>
+        <button id="editMoreBtn" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all">Edit More</button>
+    </div>
+    <div id="downloadReady" class="hidden mt-6 pt-6 border-t border-gray-800">
+        <a id="downloadLink" href="#" class="inline-flex items-center space-x-2 bg-gray-100 hover:bg-white text-gray-900 font-bold px-6 py-3 rounded-xl transition-all shadow-lg">
+            <span>Download Production File</span>
+        </a>
+    </div>
+</div>
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-950/10'); });
-        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/10'); });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/10');
-            if(e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                fileLabel.innerHTML = `Selected: <span class="text-white font-semibold">${e.dataTransfer.files[0].name}</span>`;
-            }
+<!-- ===================== STAGE 3: EDITOR ("Edit More") ===================== -->
+<div id="editorStage" class="hidden w-full max-w-5xl mx-auto mt-6 space-y-4">
+
+    <div class="flex justify-between items-center bg-gray-900/80 border border-gray-800 rounded-xl px-5 py-3">
+        <div class="flex items-center gap-3">
+            <span class="text-sm font-semibold">Editing: <span id="projectNameLabel" class="text-indigo-400">—</span></span>
+            <span class="text-xs text-gray-500" id="satisfactionLabel"></span>
+        </div>
+        <div class="flex gap-2">
+            <button id="undoBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Undo</button>
+            <button id="redoBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Redo</button>
+            <button id="renderBtn" class="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold">Render Final Video</button>
+        </div>
+    </div>
+
+    <div class="flex gap-2 flex-wrap">
+        <button data-tab="segments" class="tab-btn active px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Camera Segments</button>
+        <button data-tab="silences" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Silence / Cuts</button>
+        <button data-tab="clips" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Clips & Transitions</button>
+        <button data-tab="fx" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Filters & Text</button>
+        <button data-tab="audio" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Music</button>
+        <button data-tab="narrative" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Narrative Intent</button>
+        <button data-tab="takes" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Multi-Take</button>
+        <button data-tab="export" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Export</button>
+        <button data-tab="promo" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Promo Video</button>
+        <button data-tab="metrics" class="tab-btn px-4 py-2 text-xs rounded-lg border border-gray-800 bg-gray-900/60">Metrics</button>
+    </div>
+
+    <!-- SEGMENTS -->
+    <div class="tab-panel" data-panel="segments">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5">
+            <div class="flex justify-between items-center mb-3">
+                <p class="text-sm text-gray-400">Every camera decision the AI made for this clip. <span class="text-indigo-400">Blue</span> = AI-decided, <span class="text-amber-400">amber</span> = heuristic fallback (AI call failed for this window), <span class="text-emerald-400">green</span> = human-edited.</p>
+                <select id="activeClipForSegments" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1"></select>
+            </div>
+            <div id="segmentsList" class="space-y-3 max-h-[32rem] overflow-y-auto pr-2"></div>
+        </div>
+    </div>
+
+    <!-- SILENCES -->
+    <div class="tab-panel hidden" data-panel="silences">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+            <div class="flex items-center gap-3">
+                <select id="activeClipForSilence" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1"></select>
+                <button id="scanSilenceBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Scan for silent stretches</button>
+            </div>
+            <p class="text-xs text-gray-500">The AI only suggests candidate cuts — nothing is removed automatically. Pick "Split here" to cut the clip at that point, then delete the unwanted piece yourself in Clips & Transitions.</p>
+            <div id="silenceList" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <!-- CLIPS & TRANSITIONS -->
+    <div class="tab-panel hidden" data-panel="clips">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+            <div class="flex items-center justify-between">
+                <p class="text-sm font-semibold">Timeline clips</p>
+                <label class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 rounded-lg cursor-pointer">
+                    + Add clip
+                    <input type="file" id="addClipInput" accept="video/*" class="hidden">
+                </label>
+            </div>
+            <div id="clipsList" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- FILTERS & TEXT -->
+    <div class="tab-panel hidden" data-panel="fx">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-6">
+            <select id="activeClipForFx" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1"></select>
+
+            <div>
+                <p class="text-sm font-semibold mb-2">Add filter</p>
+                <div class="flex flex-wrap gap-2 items-center">
+                    <select id="filterKind" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1">
+                        <option value="brightness">Brightness</option>
+                        <option value="contrast">Contrast</option>
+                        <option value="saturation">Saturation</option>
+                        <option value="grayscale">Grayscale</option>
+                        <option value="blur">Blur</option>
+                        <option value="sharpen">Sharpen</option>
+                        <option value="vignette">Vignette</option>
+                    </select>
+                    <input id="filterFactor" type="number" step="0.1" placeholder="factor / strength / radius" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 w-44">
+                    <button id="addFilterBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Add filter</button>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-sm font-semibold mb-2">Add text / title overlay</p>
+                <div class="flex flex-wrap gap-2 items-center">
+                    <input id="textContent" type="text" placeholder="Overlay text" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 flex-1 min-w-[10rem]">
+                    <input id="textStart" type="number" step="0.1" placeholder="start (s)" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 w-24">
+                    <input id="textEnd" type="number" step="0.1" placeholder="end (s)" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 w-24">
+                    <select id="textStyle" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1">
+                        <option value="caption">Caption</option>
+                        <option value="title">Title</option>
+                        <option value="lower_third">Lower third</option>
+                    </select>
+                    <select id="textPosition" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1">
+                        <option value="bottom">Bottom</option>
+                        <option value="center">Center</option>
+                        <option value="top">Top</option>
+                    </select>
+                    <button id="addTextBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Add text</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO -->
+    <div class="tab-panel hidden" data-panel="audio">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+            <p class="text-sm text-gray-400">Add a background music track. It layers under the original screen-recording audio.</p>
+            <div class="flex flex-wrap gap-2 items-center">
+                <input type="file" id="audioFile" accept="audio/*" class="text-xs">
+                <input id="audioVolume" type="number" step="0.1" value="0.8" placeholder="volume" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 w-24">
+                <label class="text-xs text-gray-400 flex items-center gap-1"><input type="checkbox" id="audioDuck" checked> duck under original</label>
+                <input id="duckLevel" type="number" step="0.05" value="0.25" placeholder="duck level" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 w-24">
+                <button id="addAudioBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Add track</button>
+            </div>
+            <div id="audioList" class="space-y-1 text-xs text-gray-400"></div>
+        </div>
+    </div>
+
+    <!-- NARRATIVE -->
+    <div class="tab-panel hidden" data-panel="narrative">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+            <p class="text-sm text-gray-400">Tell the AI what a human editor would already know: who this is for, what tone to strike, how fast it should feel. It re-generates the background/mockup/caption styling around your intent (camera timing is edited per-segment above).</p>
+            <select id="activeClipForNarrative" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1"></select>
+            <div class="flex flex-wrap gap-2">
+                <input id="narrativeAudience" type="text" placeholder="Audience (e.g. enterprise IT buyers)" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 flex-1 min-w-[12rem]">
+                <input id="narrativeTone" type="text" placeholder="Tone (e.g. energetic, playful)" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 flex-1 min-w-[12rem]">
+                <select id="narrativePacing" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1">
+                    <option value="slow">Slow / deliberate</option>
+                    <option value="moderate" selected>Moderate</option>
+                    <option value="fast">Fast / punchy</option>
+                </select>
+            </div>
+            <button id="applyNarrativeBtn" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold">Regenerate styling with this intent</button>
+            <pre id="narrativeResult" class="text-xs text-gray-500 bg-gray-950/60 rounded-lg p-3 hidden"></pre>
+        </div>
+    </div>
+
+    <!-- TAKES -->
+    <div class="tab-panel hidden" data-panel="takes">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+            <p class="text-sm text-gray-400">Upload multiple recordings of the same moment. The AI never picks between them — you choose which take becomes part of the timeline.</p>
+            <div class="flex flex-wrap gap-2 items-center">
+                <input id="takeLabel" type="text" placeholder="Label (e.g. 'intro shot')" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1">
+                <input type="file" id="takeFiles" accept="video/*" multiple class="text-xs">
+                <button id="createTakeGroupBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Upload candidates</button>
+            </div>
+            <div id="takeGroupsList" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="tab-panel hidden" data-panel="export">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+            <p class="text-sm text-gray-400">Pick the platform this is going to. Aspect ratio and bitrate adjust automatically at render time.</p>
+            <select id="exportPreset" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1">
+                <option value="youtube_1080p">YouTube (1080p, 16:9)</option>
+                <option value="youtube_shorts">YouTube Shorts (9:16)</option>
+                <option value="instagram_reel">Instagram Reel (9:16)</option>
+                <option value="instagram_feed">Instagram Feed (1:1)</option>
+                <option value="twitter">Twitter/X (16:9)</option>
+                <option value="linkedin">LinkedIn (16:9)</option>
+                <option value="source">Keep source resolution</option>
+            </select>
+            <button id="setPresetBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Set export preset</button>
+        </div>
+    </div>
+
+    <!-- PROMO -->
+    <div class="tab-panel hidden" data-panel="promo">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+            <p class="text-sm text-gray-400">Generates a separate short promo/trailer from this same source video, using an NVIDIA NIM image-to-video model on the AI director's highest-importance moments.</p>
+            <div class="flex flex-wrap gap-2 items-center">
+                <input id="promoTitle" type="text" placeholder="Title card text (optional)" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 flex-1 min-w-[12rem]">
+                <input id="promoMaxFrames" type="number" value="4" min="1" max="8" class="bg-gray-950 border border-gray-700 rounded-lg text-xs px-2 py-1 w-20">
+                <button id="generatePromoBtn" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold">Generate promo</button>
+            </div>
+            <p id="promoStatus" class="text-xs text-gray-500"></p>
+        </div>
+    </div>
+
+    <!-- METRICS -->
+    <div class="tab-panel hidden" data-panel="metrics">
+        <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-5 space-y-4">
+            <button id="loadDiversityBtn" class="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg border border-gray-700">Load cross-video diversity metrics</button>
+            <pre id="metricsResult" class="text-xs text-gray-400 bg-gray-950/60 rounded-lg p-3 overflow-x-auto"></pre>
+        </div>
+    </div>
+
+</div>
+
+</main>
+
+<footer class="border-t border-gray-900 bg-gray-950/20 py-4 px-8 text-center text-xs text-gray-600 z-10">
+    © 2026 OpenVid AI Engine. Powered by NVIDIA NIM & MoviePy.
+</footer>
+
+<script>
+const state = { projectId: null, primaryClipId: null, clips: [], sourceVideoFile: null };
+
+// ---------- helpers ----------
+async function api(path, opts = {}) {
+    const res = await fetch(path, opts);
+    if (!res.ok) {
+        const text = await res.text().catch(() => res.statusText);
+        throw new Error(`${res.status}: ${text}`);
+    }
+    const ct = res.headers.get('content-type') || '';
+    return ct.includes('application/json') ? res.json() : res;
+}
+
+function clipOptionsHTML() {
+    return state.clips.map(c => `<option value="${c.id}">${c.id.slice(0,6)} (${c.duration.toFixed(1)}s)</option>`).join('');
+}
+
+function refreshClipSelectors() {
+    ['activeClipForSegments','activeClipForSilence','activeClipForFx','activeClipForNarrative'].forEach(id => {
+        const el = document.getElementById(id);
+        const prev = el.value;
+        el.innerHTML = clipOptionsHTML();
+        if (state.clips.some(c => c.id === prev)) el.value = prev;
+    });
+}
+
+// ---------- upload / drop zone ----------
+const dropZone = document.getElementById('dropZone');
+const videoFile = document.getElementById('videoFile');
+dropZone.addEventListener('click', () => videoFile.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-indigo-500'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('border-indigo-500');
+    if (e.dataTransfer.files.length) { videoFile.files = e.dataTransfer.files; updateFileLabel(); }
+});
+videoFile.addEventListener('change', updateFileLabel);
+function updateFileLabel() {
+    if (videoFile.files.length) document.getElementById('fileLabel').textContent = videoFile.files[0].name;
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!videoFile.files.length) return;
+    state.sourceVideoFile = videoFile.files[0];
+
+    document.getElementById('statusContainer').classList.remove('hidden');
+    document.getElementById('submitBtn').disabled = true;
+
+    try {
+        const project = await api('/project', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: state.sourceVideoFile.name }),
         });
+        state.projectId = project.id;
 
-        fileInput.addEventListener('change', () => {
-            if(fileInput.files.length) fileLabel.innerHTML = `Selected: <span class="text-white font-semibold">${fileInput.files[0].name}</span>`;
+        const form = new FormData();
+        form.append('video', state.sourceVideoFile);
+        form.append('cinematic', 'true');
+        const clip = await api(`/project/${state.projectId}/clip`, { method: 'POST', body: form });
+        state.primaryClipId = clip.id;
+        state.clips = [clip];
+
+        const segCount = (clip.camera_plan?.segments || []).length;
+        const aiRatio = clip.camera_plan?.planningMeta?.aiUsed ? 'AI director active' : 'heuristic fallback only (no API key)';
+        document.getElementById('planSummary').textContent = `${segCount} camera segments planned — ${aiRatio}`;
+
+        document.getElementById('uploadStage').classList.add('hidden');
+        document.getElementById('decisionStage').classList.remove('hidden');
+    } catch (err) {
+        alert('Processing failed: ' + err.message);
+    } finally {
+        document.getElementById('submitBtn').disabled = false;
+    }
+});
+
+// ---------- decision stage ----------
+document.getElementById('acceptBtn').addEventListener('click', async () => {
+    await api(`/project/${state.projectId}/clip/${state.primaryClipId}/satisfaction`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'accepted' }),
+    });
+    await renderAndOfferDownload();
+});
+
+document.getElementById('editMoreBtn').addEventListener('click', async () => {
+    await api(`/project/${state.projectId}/clip/${state.primaryClipId}/satisfaction`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'editing' }),
+    });
+    document.getElementById('satisfactionLabel').textContent = 'status: editing';
+    document.getElementById('projectNameLabel').textContent = state.projectId.slice(0, 8);
+    document.getElementById('decisionStage').classList.add('hidden');
+    document.getElementById('editorStage').classList.remove('hidden');
+    refreshClipSelectors();
+    loadSegments();
+    loadClipsList();
+});
+
+async function renderAndOfferDownload() {
+    document.getElementById('acceptBtn').textContent = 'Rendering...';
+    const res = await fetch(`/project/${state.projectId}/render`, { method: 'POST' });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    document.getElementById('downloadLink').href = url;
+    document.getElementById('downloadLink').download = `${state.projectId}.mp4`;
+    document.getElementById('downloadReady').classList.remove('hidden');
+    document.getElementById('acceptBtn').textContent = 'Download As-Is';
+}
+
+// ---------- tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== tab));
+        if (tab === 'segments') loadSegments();
+        if (tab === 'clips') loadClipsList();
+        if (tab === 'takes') loadTakeGroups();
+    });
+});
+
+document.getElementById('undoBtn').addEventListener('click', async () => { await api(`/project/${state.projectId}/undo`, { method: 'POST' }); refreshAll(); });
+document.getElementById('redoBtn').addEventListener('click', async () => { await api(`/project/${state.projectId}/redo`, { method: 'POST' }); refreshAll(); });
+document.getElementById('renderBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('renderBtn');
+    btn.textContent = 'Rendering...'; btn.disabled = true;
+    try {
+        const res = await fetch(`/project/${state.projectId}/render`, { method: 'POST' });
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${state.projectId}.mp4`; a.click();
+    } catch (err) {
+        alert('Render failed: ' + err.message);
+    } finally {
+        btn.textContent = 'Render Final Video'; btn.disabled = false;
+    }
+});
+
+async function refreshAll() {
+    const project = await api(`/project/${state.projectId}`);
+    state.clips = project.clips;
+    refreshClipSelectors();
+    loadSegments();
+    loadClipsList();
+    loadTakeGroups();
+}
+
+// ---------- segments ----------
+async function loadSegments() {
+    const clipId = document.getElementById('activeClipForSegments').value || state.primaryClipId;
+    if (!clipId) return;
+    const data = await api(`/project/${state.projectId}/clip/${clipId}/segments`);
+    const list = document.getElementById('segmentsList');
+    list.innerHTML = '';
+    data.segments.forEach((seg, i) => {
+        const cls = seg.humanEdited ? 'edited' : (seg.source === 'ai' ? 'ai' : 'heuristic');
+        const div = document.createElement('div');
+        div.className = `seg-card ${cls} bg-gray-950/60 border border-gray-800 rounded-lg p-3 text-xs space-y-2`;
+        div.innerHTML = `
+            <div class="flex justify-between items-center">
+                <span class="font-semibold">#${i} · ${seg.startTime.toFixed(2)}s–${seg.endTime.toFixed(2)}s</span>
+                <span class="text-gray-500">${seg.source || 'ai'}${seg.approved ? ' · approved' : ''}</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <label class="flex flex-col gap-1">action
+                    <select data-field="action" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                        ${['static','hold','zoom_in','zoom_out','pan','track_cursor'].map(a => `<option value="${a}" ${a===seg.action?'selected':''}>${a}</option>`).join('')}
+                    </select>
+                </label>
+                <label class="flex flex-col gap-1">zoom
+                    <input data-field="zoomLevel" type="number" step="0.1" value="${seg.zoomLevel}" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                </label>
+                <label class="flex flex-col gap-1">focusX %
+                    <input data-field="focusX" type="number" step="1" value="${seg.focusX}" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                </label>
+                <label class="flex flex-col gap-1">focusY %
+                    <input data-field="focusY" type="number" step="1" value="${seg.focusY}" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                </label>
+                <label class="flex flex-col gap-1">pan dir
+                    <select data-field="panDirection" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                        ${['none','left','right','up','down','up-left','up-right','down-left','down-right'].map(d => `<option value="${d}" ${d===seg.panDirection?'selected':''}>${d}</option>`).join('')}
+                    </select>
+                </label>
+                <label class="flex flex-col gap-1">easing
+                    <select data-field="easing" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                        ${['linear','easeOutQuart','easeInQuart','easeInOutQuart','easeInOutCubic','easeOutCubic','easeInOutSine'].map(x => `<option value="${x}" ${x===seg.easing?'selected':''}>${x}</option>`).join('')}
+                    </select>
+                </label>
+                <label class="flex flex-col gap-1">move to X %
+                    <input data-field="movementEndX" type="number" step="1" value="${seg.movementEndX ?? seg.focusX}" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                </label>
+                <label class="flex flex-col gap-1">move to Y %
+                    <input data-field="movementEndY" type="number" step="1" value="${seg.movementEndY ?? seg.focusY}" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                </label>
+            </div>
+            <p class="text-gray-500">For "pan" / "track_cursor" actions, the camera moves from focusX/Y toward "move to X/Y" over the segment. Leave them equal to focusX/Y for no movement.</p>
+            ${seg.reasoning ? `<p class="text-gray-500 italic">"${seg.reasoning}"</p>` : ''}
+            <div class="flex gap-2 pt-1">
+                <button class="save-override px-2 py-1 bg-indigo-600 hover:bg-indigo-500 rounded">Save override</button>
+                <button class="approve-seg px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700">Approve as-is</button>
+                <button class="reset-seg px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700">Reset to AI</button>
+            </div>
+        `;
+        div.querySelector('.save-override').addEventListener('click', async () => {
+            const fields = {};
+            div.querySelectorAll('[data-field]').forEach(inp => {
+                fields[inp.dataset.field] = inp.type === 'number' ? parseFloat(inp.value) : inp.value;
+            });
+            fields.movementEnabled = fields.action === 'pan' || fields.action === 'track_cursor';
+            await api(`/project/${state.projectId}/clip/${clipId}/segment/${i}/override`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields),
+            });
+            loadSegments();
         });
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if(!fileInput.files.length) return;
-
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            statusContainer.classList.remove('hidden');
-            downloadContainer.classList.add('hidden');
-
-            let progress = 0;
-            let stageIdx = 0;
-            const progressInterval = setInterval(() => {
-                if (progress < 92) {
-                    progress += Math.floor(Math.random() * 4) + 1;
-                    progressBar.style.width = `${progress}%`;
-                    progressPercent.innerText = `${progress}%`;
-                    const newStage = Math.min(STAGES.length - 1, Math.floor(progress / (100 / STAGES.length)));
-                    if (newStage !== stageIdx) {
-                        stageIdx = newStage;
-                        statusText.lastChild.textContent = STAGES[stageIdx];
-                    }
-                }
-            }, 700);
-
-            const formData = new FormData();
-            formData.append('video', fileInput.files[0]);
-
-            try {
-                const response = await fetch('/process-video', { method: 'POST', body: formData });
-                if(!response.ok) throw new Error('Render Failed');
-
-                const blob = await response.blob();
-                const downloadUrl = URL.createObjectURL(blob);
-
-                clearInterval(progressInterval);
-                progressBar.style.width = '100%';
-                progressPercent.innerText = '100%';
-
-                downloadBtn.href = downloadUrl;
-                downloadBtn.download = `openvid_ai_promo_${Date.now()}.mp4`;
-                downloadContainer.classList.remove('hidden');
-                statusContainer.classList.add('hidden');
-            } catch (err) {
-                clearInterval(progressInterval);
-                alert('Error rendering production asset. Check server logs.');
-                console.error(err);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
+        div.querySelector('.approve-seg').addEventListener('click', async () => {
+            await api(`/project/${state.projectId}/clip/${clipId}/segment/${i}/approve`, { method: 'POST' });
+            loadSegments();
         });
-    </script>
+        div.querySelector('.reset-seg').addEventListener('click', async () => {
+            await api(`/project/${state.projectId}/clip/${clipId}/segment/${i}/override`, { method: 'DELETE' });
+            loadSegments();
+        });
+        list.appendChild(div);
+    });
+}
+document.getElementById('activeClipForSegments').addEventListener('change', loadSegments);
+
+// ---------- silences ----------
+document.getElementById('scanSilenceBtn').addEventListener('click', async () => {
+    const clipId = document.getElementById('activeClipForSilence').value || state.primaryClipId;
+    if (!clipId) return;
+    const data = await api(`/project/${state.projectId}/clip/${clipId}/silences`);
+    const list = document.getElementById('silenceList');
+    list.innerHTML = '';
+    if (!data.suggestedCuts.length) {
+        list.innerHTML = '<p class="text-xs text-gray-500">No silent stretches detected above the threshold.</p>';
+        return;
+    }
+    data.suggestedCuts.forEach(cut => {
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center bg-gray-950/60 border border-gray-800 rounded-lg p-2 text-xs';
+        div.innerHTML = `<span>${cut.startTime.toFixed(2)}s → ${cut.endTime.toFixed(2)}s</span>
+            <div class="flex gap-2">
+                <button class="split-start px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700">Split at start</button>
+                <button class="split-end px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700">Split at end</button>
+            </div>`;
+        div.querySelector('.split-start').addEventListener('click', () => splitClip(clipId, cut.startTime));
+        div.querySelector('.split-end').addEventListener('click', () => splitClip(clipId, cut.endTime));
+        list.appendChild(div);
+    });
+});
+
+async function splitClip(clipId, t) {
+    try {
+        await api(`/project/${state.projectId}/clip/${clipId}/split`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ split_time: t }),
+        });
+        await refreshAll();
+        alert(`Split at ${t.toFixed(2)}s. Review the new piece under Clips & Transitions.`);
+    } catch (err) { alert('Split failed: ' + err.message); }
+}
+
+// ---------- clips & transitions ----------
+async function loadClipsList() {
+    if (!state.projectId) return;
+    const project = await api(`/project/${state.projectId}`);
+    state.clips = project.clips;
+    const list = document.getElementById('clipsList');
+    list.innerHTML = '';
+    project.clips.sort((a, b) => a.order - b.order).forEach(clip => {
+        const div = document.createElement('div');
+        div.className = 'bg-gray-950/60 border border-gray-800 rounded-lg p-3 text-xs space-y-2';
+        div.innerHTML = `
+            <div class="flex justify-between items-center">
+                <span class="font-semibold">#${clip.order} · ${clip.id.slice(0,6)} · ${clip.duration.toFixed(2)}s</span>
+                <button class="delete-clip px-2 py-1 bg-red-900/40 hover:bg-red-900/70 border border-red-800 rounded text-red-300">Delete</button>
+            </div>
+            <div class="flex flex-wrap gap-2 items-center">
+                <label class="flex items-center gap-1">trim
+                    <input data-f="trim_start" type="number" step="0.1" value="${clip.trim_start}" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5 w-20">
+                    →
+                    <input data-f="trim_end" type="number" step="0.1" value="${clip.trim_end}" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5 w-20">
+                </label>
+                <button class="save-trim px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700">Save trim</button>
+                <label class="flex items-center gap-1">transition in
+                    <select data-f="transition_in" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5">
+                        ${['none','crossfade','fade_black','wipe_left','wipe_right'].map(t => `<option value="${t}" ${t===clip.transition_in?'selected':''}>${t}</option>`).join('')}
+                    </select>
+                </label>
+                <input data-f="transition_duration" type="number" step="0.1" value="${clip.transition_duration}" class="bg-gray-900 border border-gray-700 rounded px-1 py-0.5 w-16" title="duration (s)">
+                <button class="save-transition px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700">Save transition</button>
+            </div>
+        `;
+        div.querySelector('.delete-clip').addEventListener('click', async () => {
+            await api(`/project/${state.projectId}/clip/${clip.id}`, { method: 'DELETE' });
+            loadClipsList();
+        });
+        div.querySelector('.save-trim').addEventListener('click', async () => {
+            const ts = parseFloat(div.querySelector('[data-f=trim_start]').value);
+            const te = parseFloat(div.querySelector('[data-f=trim_end]').value);
+            await api(`/project/${state.projectId}/clip/${clip.id}/trim`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trim_start: ts, trim_end: te }),
+            });
+            loadClipsList();
+        });
+        div.querySelector('.save-transition').addEventListener('click', async () => {
+            const t = div.querySelector('[data-f=transition_in]').value;
+            const d = parseFloat(div.querySelector('[data-f=transition_duration]').value);
+            await api(`/project/${state.projectId}/clip/${clip.id}/transition`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transition_in: t, transition_duration: d }),
+            });
+            loadClipsList();
+        });
+        list.appendChild(div);
+    });
+}
+
+document.getElementById('addClipInput').addEventListener('change', async (e) => {
+    if (!e.target.files.length) return;
+    const form = new FormData();
+    form.append('video', e.target.files[0]);
+    form.append('cinematic', 'true');
+    await api(`/project/${state.projectId}/clip`, { method: 'POST', body: form });
+    await refreshAll();
+});
+
+// ---------- filters & text ----------
+document.getElementById('addFilterBtn').addEventListener('click', async () => {
+    const clipId = document.getElementById('activeClipForFx').value || state.primaryClipId;
+    const kind = document.getElementById('filterKind').value;
+    const val = parseFloat(document.getElementById('filterFactor').value);
+    const params = {};
+    if (!isNaN(val)) {
+        if (kind === 'blur') params.radius = val;
+        else if (kind === 'vignette') params.strength = val;
+        else params.factor = val;
+    }
+    await api(`/project/${state.projectId}/clip/${clipId}/effect`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, params }),
+    });
+    alert('Filter added.');
+});
+
+document.getElementById('addTextBtn').addEventListener('click', async () => {
+    const clipId = document.getElementById('activeClipForFx').value || state.primaryClipId;
+    const body = {
+        text: document.getElementById('textContent').value,
+        startTime: parseFloat(document.getElementById('textStart').value || 0),
+        endTime: parseFloat(document.getElementById('textEnd').value || 3),
+        style: document.getElementById('textStyle').value,
+        position: document.getElementById('textPosition').value,
+    };
+    await api(`/project/${state.projectId}/clip/${clipId}/text`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    alert('Text overlay added.');
+});
+
+// ---------- audio ----------
+document.getElementById('addAudioBtn').addEventListener('click', async () => {
+    const file = document.getElementById('audioFile').files[0];
+    if (!file) return alert('Choose an audio file first.');
+    const form = new FormData();
+    form.append('audio', file);
+    form.append('volume', document.getElementById('audioVolume').value);
+    form.append('duck_under_original', document.getElementById('audioDuck').checked);
+    form.append('duck_level', document.getElementById('duckLevel').value);
+    const project = await api(`/project/${state.projectId}/audio`, { method: 'POST', body: form });
+    const list = document.getElementById('audioList');
+    list.innerHTML = project.audio_tracks.map(a => `<div>${a.path.split('/').pop()} · vol ${a.volume} · duck ${a.duck_under_original}</div>`).join('');
+});
+
+// ---------- narrative ----------
+document.getElementById('applyNarrativeBtn').addEventListener('click', async () => {
+    const clipId = document.getElementById('activeClipForNarrative').value || state.primaryClipId;
+    const body = {
+        audience: document.getElementById('narrativeAudience').value,
+        tone: document.getElementById('narrativeTone').value,
+        pacing: document.getElementById('narrativePacing').value,
+    };
+    const result = await api(`/project/${state.projectId}/clip/${clipId}/narrative`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const pre = document.getElementById('narrativeResult');
+    pre.textContent = JSON.stringify(result, null, 2);
+    pre.classList.remove('hidden');
+});
+
+// ---------- takes ----------
+document.getElementById('createTakeGroupBtn').addEventListener('click', async () => {
+    const files = document.getElementById('takeFiles').files;
+    if (!files.length) return alert('Choose at least one candidate video.');
+    const form = new FormData();
+    for (const f of files) form.append('videos', f);
+    form.append('label', document.getElementById('takeLabel').value || 'Untitled take');
+    await api(`/project/${state.projectId}/takes`, { method: 'POST', body: form });
+    loadTakeGroups();
+});
+
+async function loadTakeGroups() {
+    if (!state.projectId) return;
+    const project = await api(`/project/${state.projectId}`);
+    const list = document.getElementById('takeGroupsList');
+    list.innerHTML = '';
+    project.take_groups.forEach(group => {
+        const div = document.createElement('div');
+        div.className = 'bg-gray-950/60 border border-gray-800 rounded-lg p-3 text-xs space-y-2';
+        div.innerHTML = `
+            <p class="font-semibold">${group.label} ${group.selected_path ? `· selected: ${group.selected_path.split('/').pop()}` : '(no selection yet)'}</p>
+            <div class="flex flex-wrap gap-2">
+                ${group.candidate_paths.map(p => `<button class="select-take px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700" data-path="${p}">${p.split('/').pop()}</button>`).join('')}
+            </div>
+        `;
+        div.querySelectorAll('.select-take').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                await api(`/project/${state.projectId}/takes/${group.id}/select`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chosen_path: btn.dataset.path, cinematic: true }),
+                });
+                await refreshAll();
+                alert('Take selected and added to the timeline.');
+            });
+        });
+        list.appendChild(div);
+    });
+}
+
+// ---------- export preset ----------
+document.getElementById('setPresetBtn').addEventListener('click', async () => {
+    const preset = document.getElementById('exportPreset').value;
+    await api(`/project/${state.projectId}/export-preset`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset }),
+    });
+    alert('Export preset set to ' + preset);
+});
+
+// ---------- promo ----------
+document.getElementById('generatePromoBtn').addEventListener('click', async () => {
+    if (!state.sourceVideoFile) return alert('Original source video not available in this session anymore — re-upload it here for the promo.');
+    const statusEl = document.getElementById('promoStatus');
+    statusEl.textContent = 'Generating promo (this can take a while)...';
+    try {
+        const form = new FormData();
+        form.append('video', state.sourceVideoFile);
+        form.append('title', document.getElementById('promoTitle').value);
+        form.append('max_frames', document.getElementById('promoMaxFrames').value);
+        const res = await fetch('/generate-promo', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'promo.mp4'; a.click();
+        statusEl.textContent = 'Promo generated and downloaded.';
+    } catch (err) {
+        statusEl.textContent = 'Promo generation unavailable this run: ' + err.message;
+    }
+});
+
+// ---------- metrics ----------
+document.getElementById('loadDiversityBtn').addEventListener('click', async () => {
+    const data = await api('/metrics/diversity');
+    document.getElementById('metricsResult').textContent = JSON.stringify(data, null, 2);
+});
+</script>
 </body>
 </html>

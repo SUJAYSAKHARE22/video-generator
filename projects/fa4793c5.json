@@ -1,0 +1,161 @@
+{
+  "id": "fa4793c5",
+  "name": "smoke-test",
+  "clips": [
+    {
+      "id": "8cbf1253",
+      "source_path": "uploads/fa4793c5_afc2e3_testA.mp4",
+      "trim_start": 0.0,
+      "trim_end": 6.0,
+      "order": 0,
+      "camera_plan": {
+        "background": {
+          "type": "gradient",
+          "paletteIndex": 10
+        },
+        "mockup": {
+          "style": "browser",
+          "darkMode": true,
+          "frameColor": "#1e1e1e",
+          "url": "app.yourproduct.com",
+          "cornerRadius": 14,
+          "padding": 6
+        },
+        "caption": null,
+        "segments": [
+          {
+            "startTime": 0.017,
+            "endTime": 2.17,
+            "movementEnabled": false,
+            "movementEndX": 7.0,
+            "movementEndY": 10.9,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "confidence": 0.45,
+            "source": "heuristic",
+            "action": "zoom_out",
+            "focusX": 7.0,
+            "focusY": 10.9,
+            "zoomLevel": 1.0,
+            "importance": 0.5,
+            "reasoning": "scrolling - easing zoom back out to follow new content"
+          },
+          {
+            "startTime": 2.35,
+            "endTime": 3.283,
+            "movementEnabled": false,
+            "movementEndX": 39.1,
+            "movementEndY": 41.7,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "confidence": 0.45,
+            "source": "heuristic",
+            "action": "zoom_out",
+            "focusX": 39.1,
+            "focusY": 41.7,
+            "zoomLevel": 1.0,
+            "importance": 0.5,
+            "reasoning": "scrolling - easing zoom back out to follow new content"
+          },
+          {
+            "startTime": 3.017,
+            "endTime": 4.1,
+            "movementEnabled": false,
+            "movementEndX": 48.7,
+            "movementEndY": 49.4,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "confidence": 0.45,
+            "source": "heuristic",
+            "action": "zoom_in",
+            "focusX": 48.7,
+            "focusY": 49.4,
+            "zoomLevel": 3.5,
+            "importance": 0.75,
+            "reasoning": "click at (49,49)"
+          },
+          {
+            "startTime": 3.683,
+            "endTime": 4.5,
+            "movementEnabled": false,
+            "movementEndX": 56.5,
+            "movementEndY": 56.9,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "confidence": 0.45,
+            "source": "heuristic",
+            "action": "zoom_out",
+            "focusX": 56.5,
+            "focusY": 56.9,
+            "zoomLevel": 1.7149999999999996,
+            "importance": 0.5,
+            "reasoning": "scrolling - easing zoom back out to follow new content"
+          },
+          {
+            "startTime": 4.683,
+            "endTime": 5.83,
+            "movementEnabled": false,
+            "movementEndX": 69.5,
+            "movementEndY": 68.6,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "confidence": 0.45,
+            "source": "heuristic",
+            "action": "zoom_out",
+            "focusX": 69.5,
+            "focusY": 68.6,
+            "zoomLevel": 1.0,
+            "importance": 0.5,
+            "reasoning": "scrolling - easing zoom back out to follow new content"
+          }
+        ],
+        "planningMeta": {
+          "totalEvents": 18,
+          "eventTypes": [
+            "click",
+            "scroll"
+          ],
+          "batches": 6,
+          "aiUsed": false
+        }
+      },
+      "effects": [],
+      "text_overlays": [],
+      "transition_in": "none",
+      "transition_duration": 0.6,
+      "segment_overrides": {
+        "0": {
+          "action": "pan",
+          "focusX": 10,
+          "focusY": 10,
+          "zoomLevel": 2.5
+        }
+      },
+      "approved_segments": [
+        1
+      ],
+      "narrative": null,
+      "ai_satisfaction": "editing",
+      "source_take_group": null
+    }
+  ],
+  "audio_tracks": [],
+  "export_preset": "instagram_reel",
+  "take_groups": [],
+  "history": [
+    {
+      "id": "fa4793c5",
+      "name": "smoke-test",
+      "clips": [],
+      "audio_tracks": [],
+      "export_preset": "youtube_1080p",
+      "take_groups": []
+    }
+  ],
+  "redo_stack": []
+}

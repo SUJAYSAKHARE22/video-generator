@@ -1,0 +1,212 @@
+{
+  "id": "84d6e855",
+  "name": "Screen Recording 2026-07-12 002843.mp4",
+  "clips": [
+    {
+      "id": "a0f3dd8d",
+      "source_path": "uploads\\84d6e855_4efadc_Screen_Recording_2026-07-12_002843.mp4",
+      "trim_start": 0.0,
+      "trim_end": 26.86,
+      "order": 0,
+      "camera_plan": {
+        "background": {
+          "type": "gradient",
+          "paletteIndex": 0
+        },
+        "mockup": {
+          "style": "browser",
+          "darkMode": true,
+          "frameColor": "#000000",
+          "url": "https://www.example.com",
+          "cornerRadius": 8,
+          "padding": 8
+        },
+        "caption": {
+          "text": "User interacts with the software",
+          "startTime": 0,
+          "endTime": 26.86
+        },
+        "segments": [
+          {
+            "startTime": 0.0,
+            "endTime": 1.0,
+            "action": "static",
+            "focusX": 50.0,
+            "focusY": 10.0,
+            "movementEnabled": false,
+            "movementEndX": 50.0,
+            "movementEndY": 10.0,
+            "zoomLevel": 2.0,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.8,
+            "confidence": 0.9,
+            "reasoning": "Initial focus on Google search bar",
+            "source": "ai"
+          },
+          {
+            "startTime": 1.17,
+            "endTime": 1.77,
+            "action": "static",
+            "focusX": 50.0,
+            "focusY": 50.0,
+            "movementEnabled": false,
+            "movementEndX": 50.0,
+            "movementEndY": 50.0,
+            "zoomLevel": 2.0,
+            "panDirection": "none",
+            "easing": "linear",
+            "transitionType": "hold",
+            "importance": 0.5,
+            "confidence": 0.8,
+            "reasoning": null,
+            "source": "ai"
+          },
+          {
+            "startTime": 1.77,
+            "endTime": 2.47,
+            "action": "pan",
+            "focusX": 52.0,
+            "focusY": 55.0,
+            "movementEnabled": true,
+            "movementEndX": 52.0,
+            "movementEndY": 55.0,
+            "zoomLevel": 2.2,
+            "panDirection": "down-right",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.7,
+            "confidence": 0.9,
+            "reasoning": "Following scrolling motion",
+            "source": "ai"
+          },
+          {
+            "startTime": 2.67,
+            "endTime": 3.77,
+            "action": "hold",
+            "focusX": 50.0,
+            "focusY": 10.0,
+            "movementEnabled": false,
+            "movementEndX": 50.0,
+            "movementEndY": 10.0,
+            "zoomLevel": 2.2,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.8,
+            "confidence": 0.9,
+            "reasoning": null,
+            "source": "ai"
+          },
+          {
+            "startTime": 3.5,
+            "endTime": 4.1,
+            "action": "track_cursor",
+            "focusX": 54.0,
+            "focusY": 49.0,
+            "movementEnabled": true,
+            "movementEndX": 54.0,
+            "movementEndY": 49.0,
+            "zoomLevel": 2.8,
+            "panDirection": "none",
+            "easing": "easeOutQuart",
+            "transitionType": "smooth",
+            "importance": 0.9,
+            "confidence": 0.95,
+            "reasoning": "cursor arrival event",
+            "source": "ai"
+          },
+          {
+            "startTime": 4.3,
+            "endTime": 4.9,
+            "action": "track_cursor",
+            "focusX": 54.0,
+            "focusY": 49.0,
+            "movementEnabled": true,
+            "movementEndX": 52.0,
+            "movementEndY": 52.0,
+            "zoomLevel": 2.8,
+            "panDirection": "down-right",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.7,
+            "confidence": 0.8,
+            "reasoning": "Continue tracking cursor from previous window",
+            "source": "ai"
+          },
+          {
+            "startTime": 4.9,
+            "endTime": 6.8,
+            "action": "zoom_in",
+            "focusX": 52.0,
+            "focusY": 52.0,
+            "movementEnabled": false,
+            "movementEndX": 52.0,
+            "movementEndY": 52.0,
+            "zoomLevel": 3.2,
+            "panDirection": "none",
+            "easing": "easeOutQuart",
+            "transitionType": "smooth",
+            "importance": 0.9,
+            "confidence": 0.9,
+            "reasoning": "Zoom in on click location",
+            "source": "ai"
+          },
+          {
+            "startTime": 7.0,
+            "endTime": 8.13,
+            "action": "pan",
+            "focusX": 48.0,
+            "focusY": 8.0,
+            "movementEnabled": true,
+            "movementEndX": 50.0,
+            "movementEndY": 10.0,
+            "zoomLevel": 4.0,
+            "panDirection": "down-right",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.8,
+            "confidence": 0.9,
+            "reasoning": "Following dominant motion direction and maintaining focus on Google search bar.",
+            "source": "ai"
+          }
+        ],
+        "planningMeta": {
+          "totalEvents": 73,
+          "eventTypes": [
+            "arrival",
+            "click",
+            "redirect",
+            "scroll"
+          ],
+          "batches": 6,
+          "aiUsed": true
+        }
+      },
+      "effects": [],
+      "text_overlays": [],
+      "transition_in": "none",
+      "transition_duration": 0.6,
+      "segment_overrides": {},
+      "approved_segments": [],
+      "narrative": null,
+      "ai_satisfaction": "editing",
+      "source_take_group": null
+    }
+  ],
+  "audio_tracks": [],
+  "export_preset": "youtube_1080p",
+  "take_groups": [],
+  "history": [
+    {
+      "id": "84d6e855",
+      "name": "Screen Recording 2026-07-12 002843.mp4",
+      "clips": [],
+      "audio_tracks": [],
+      "export_preset": "youtube_1080p",
+      "take_groups": []
+    }
+  ],
+  "redo_stack": []
+}

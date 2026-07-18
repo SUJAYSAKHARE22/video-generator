@@ -176,8 +176,16 @@ def apply_text_overlays(clip, overlays):
 
 def render_clip(clip_model: Clip, config=DEFAULT_CONFIG):
     """Renders one timeline Clip into a moviepy clip: trims the source,
-    applies its cinematic camera plan (if present) frame-by-frame exactly
-    like `renderer.py`, then layers effects and text overlays on top."""
+    applies its cinematic camera plan (if present) frame-by-frame, composites
+    the result through the SAME device-mockup + gradient-background Shell
+    used by the single-shot pipeline (renderer.py) so a clip edited in the
+    hybrid "Edit More" flow doesn't silently lose its styling, then draws
+    the AI-authored caption (if any) and any manually-added text overlays on
+    top. Compositing every clip to the same 1920x1080 canvas here also
+    means multi-clip projects concatenate correctly even when the source
+    recordings have different native resolutions."""
+    from renderer import Shell as _Shell, rounded_mask  # local import: avoids a module-level cycle risk
+
     raw = trim_source(clip_model.source_path, clip_model.trim_start, clip_model.trim_end)
     # effective_segments() merges any human "Edit More" overrides on top of
     # the AI-authored segments (index-for-index), so a human override here
@@ -185,27 +193,65 @@ def render_clip(clip_model: Clip, config=DEFAULT_CONFIG):
     # and inspectable in clip_model.camera_plan.
     segments = clip_model.effective_segments()
 
-    if segments:
-        def make_frame(t):
+    style_plan = clip_model.camera_plan or {}
+    shell_plan = {
+        "background": style_plan.get("background") or {"type": "gradient", "paletteIndex": 0},
+        "mockup": style_plan.get("mockup") or {
+            "style": "browser", "darkMode": True, "frameColor": "#1e1e1e",
+            "url": "app.yourproduct.com", "cornerRadius": 14, "padding": 6,
+        },
+    }
+    caption = style_plan.get("caption")
+
+    video_w, video_h = raw.size
+    shell = _Shell(shell_plan, video_w, video_h)
+    cx, cy, cw, ch = shell.content_rect
+    content_mask = rounded_mask(cw, ch, shell.content_radius, shell.content_corners)
+
+    def make_frame(t):
+        frame = raw.get_frame(t)
+        h, w = frame.shape[:2]
+
+        if segments:
             scale, fx, fy = compute_camera_state(segments, t, config)
-            frame = raw.get_frame(t)
-            h, w = frame.shape[:2]
             scale = max(scale, 1.0)
             crop_w, crop_h = w / scale, h / scale
-            cx, cy = w * fx / 100.0, h * fy / 100.0
-            x0 = min(max(cx - crop_w / 2, 0), w - crop_w)
-            y0 = min(max(cy - crop_h / 2, 0), h - crop_h)
-            img = Image.fromarray(frame).crop((int(x0), int(y0), int(x0 + crop_w), int(y0 + crop_h)))
-            return np.array(img.resize((w, h), Image.LANCZOS))
+            px, py = w * fx / 100.0, h * fy / 100.0
+            x0 = min(max(px - crop_w / 2, 0), w - crop_w)
+            y0 = min(max(py - crop_h / 2, 0), h - crop_h)
+            cropped_arr = np.array(Image.fromarray(frame).crop(
+                (int(x0), int(y0), int(x0 + crop_w), int(y0 + crop_h))
+            ))
+        else:
+            cropped_arr = frame
 
-        rendered = VideoClip(make_frame, duration=raw.duration)
-        if raw.audio is not None:
-            rendered = rendered.set_audio(raw.audio)
-    else:
-        rendered = raw
+        for eff in clip_model.effects:
+            if eff.kind not in SUPPORTED_FILTERS:
+                continue
+            if eff.startTime is not None and t < eff.startTime:
+                continue
+            if eff.endTime is not None and t > eff.endTime:
+                continue
+            cropped_arr = _apply_pixel_filter(cropped_arr, eff.kind, eff.params)
 
-    rendered = apply_effects(rendered, clip_model.effects)
-    rendered = apply_text_overlays(rendered, clip_model.text_overlays)
+        content_img = Image.fromarray(cropped_arr).resize((cw, ch), Image.LANCZOS)
+
+        canvas = Image.fromarray(shell.canvas_base.copy()).convert("RGB")
+        canvas.paste(content_img, (cx, cy), content_mask)
+        canvas_arr = np.array(canvas)
+
+        if caption and caption.get("startTime", 0) <= t <= caption.get("endTime", 0):
+            canvas_arr = _draw_text_frame(canvas_arr, caption["text"], "bottom", "caption")
+
+        for ov in clip_model.text_overlays:
+            if ov.startTime <= t <= ov.endTime:
+                canvas_arr = _draw_text_frame(canvas_arr, ov.text, ov.position, ov.style)
+
+        return canvas_arr
+
+    rendered = VideoClip(make_frame, duration=raw.duration)
+    if raw.audio is not None:
+        rendered = rendered.set_audio(raw.audio)
     return rendered
 
 
