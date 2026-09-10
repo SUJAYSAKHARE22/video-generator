@@ -1,8 +1,8 @@
-# 🎬 OpenVid AI — Autonomous Cinematic Demo Engine
+# 🎬 motion-editor AI — Autonomous Cinematic Demo Engine
 
-**OpenVid AI** is an autonomous SaaS-style video editing and camera directing engine. It takes raw screen recordings of software interfaces and automatically transforms them into premium, high-quality cinematic product promos.
+**motion-editor AI** is an autonomous SaaS-style video editing and camera directing engine. It takes raw screen recordings of software interfaces and automatically transforms them into premium, high-quality cinematic product promos.
 
-By combining classical computer vision (for dense activity tracking and UI analysis) with vision-based LLMs (NVIDIA NIM, Llama-3.2-11b-vision-instruct), OpenVid AI acts as an automated "camera director"—identifying user activity, framing modals, panning smoothly, adding device mockups, custom gradients, and captions, and rendering the final output to a production-ready 1080p video.
+By combining classical computer vision (for dense activity tracking and UI analysis) with vision-based LLMs (NVIDIA NIM, Llama-3.2-11b-vision-instruct), motion-editor AI acts as an automated "camera director"—identifying user activity, framing modals, panning smoothly, adding device mockups, custom gradients, and captions, and rendering the final output to a production-ready 1080p video.
 
 ---
 

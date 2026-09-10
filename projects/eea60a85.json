@@ -1,0 +1,212 @@
+{
+  "id": "eea60a85",
+  "name": "Screen Recording 2026-07-12 002843.mp4",
+  "clips": [
+    {
+      "id": "f744b12c",
+      "source_path": "uploads\\eea60a85_3ea5ec_Screen_Recording_2026-07-12_002843.mp4",
+      "trim_start": 0.0,
+      "trim_end": 26.86,
+      "order": 0,
+      "camera_plan": {
+        "background": {
+          "type": "gradient",
+          "paletteIndex": 2
+        },
+        "mockup": {
+          "style": "browser",
+          "darkMode": true,
+          "frameColor": "#1e1e1e",
+          "url": "https://www.example.com",
+          "cornerRadius": 8,
+          "padding": 6
+        },
+        "caption": {
+          "text": "73 cursor/UI events detected",
+          "startTime": 0,
+          "endTime": 26.86
+        },
+        "segments": [
+          {
+            "startTime": 0.0,
+            "endTime": 1.0,
+            "action": "zoom_in",
+            "focusX": 50.0,
+            "focusY": 50.0,
+            "movementEnabled": false,
+            "movementEndX": 50.0,
+            "movementEndY": 50.0,
+            "zoomLevel": 2.5,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 1.0,
+            "confidence": 1.0,
+            "reasoning": "Focus on newly opened panel",
+            "source": "ai"
+          },
+          {
+            "startTime": 1.17,
+            "endTime": 1.77,
+            "action": "zoom_in",
+            "focusX": 50.0,
+            "focusY": 50.0,
+            "movementEnabled": false,
+            "movementEndX": 50.0,
+            "movementEndY": 50.0,
+            "zoomLevel": 3.0,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.9,
+            "confidence": 0.95,
+            "reasoning": "New panel with search bar appears, zoom in for focus.",
+            "source": "ai"
+          },
+          {
+            "startTime": 1.77,
+            "endTime": 2.47,
+            "action": "track_cursor",
+            "focusX": 50.0,
+            "focusY": 50.0,
+            "movementEnabled": true,
+            "movementEndX": 55.0,
+            "movementEndY": 55.0,
+            "zoomLevel": 3.0,
+            "panDirection": "down-right",
+            "easing": "easeInOutSine",
+            "transitionType": "smooth",
+            "importance": 0.8,
+            "confidence": 0.9,
+            "reasoning": "User scrolling down-right, follow cursor movement.",
+            "source": "ai"
+          },
+          {
+            "startTime": 2.67,
+            "endTime": 3.77,
+            "action": "pan",
+            "focusX": 50.0,
+            "focusY": 50.0,
+            "movementEnabled": true,
+            "movementEndX": 50.0,
+            "movementEndY": 50.0,
+            "zoomLevel": 3.0,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.8,
+            "confidence": 0.9,
+            "reasoning": "Retargeting to the newly opened Google search bar panel.",
+            "source": "ai"
+          },
+          {
+            "startTime": 3.5,
+            "endTime": 4.1,
+            "action": "track_cursor",
+            "focusX": 54.0,
+            "focusY": 49.0,
+            "movementEnabled": true,
+            "movementEndX": 54.0,
+            "movementEndY": 49.0,
+            "zoomLevel": 3.5,
+            "panDirection": "none",
+            "easing": "easeInOutSine",
+            "transitionType": "smooth",
+            "importance": 0.9,
+            "confidence": 0.95,
+            "reasoning": "Anticipating interaction near the cursor's arrival point.",
+            "source": "ai"
+          },
+          {
+            "startTime": 4.35,
+            "endTime": 5.47,
+            "movementEnabled": false,
+            "movementEndX": 51.9,
+            "movementEndY": 51.9,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "confidence": 0.45,
+            "source": "heuristic",
+            "action": "zoom_in",
+            "focusX": 51.9,
+            "focusY": 51.9,
+            "zoomLevel": 4.5,
+            "importance": 0.75,
+            "reasoning": "click at (52,52)"
+          },
+          {
+            "startTime": 5.67,
+            "endTime": 6.8,
+            "action": "hold",
+            "focusX": 50.0,
+            "focusY": 50.0,
+            "movementEnabled": false,
+            "movementEndX": 50.0,
+            "movementEndY": 50.0,
+            "zoomLevel": 4.5,
+            "panDirection": "none",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.9,
+            "confidence": 0.9,
+            "reasoning": "Google search bar is the single most visually important point",
+            "source": "ai"
+          },
+          {
+            "startTime": 7.0,
+            "endTime": 8.13,
+            "action": "pan",
+            "focusX": 50.0,
+            "focusY": 50.0,
+            "movementEnabled": true,
+            "movementEndX": 55.0,
+            "movementEndY": 55.0,
+            "zoomLevel": 4.5,
+            "panDirection": "down-right",
+            "easing": "easeInOutCubic",
+            "transitionType": "smooth",
+            "importance": 0.8,
+            "confidence": 0.9,
+            "reasoning": "Following dominant motion direction and scroll events.",
+            "source": "ai"
+          }
+        ],
+        "planningMeta": {
+          "totalEvents": 73,
+          "eventTypes": [
+            "arrival",
+            "click",
+            "redirect",
+            "scroll"
+          ],
+          "batches": 6,
+          "aiUsed": true
+        }
+      },
+      "effects": [],
+      "text_overlays": [],
+      "transition_in": "none",
+      "transition_duration": 0.6,
+      "segment_overrides": {},
+      "approved_segments": [],
+      "narrative": null,
+      "ai_satisfaction": "editing",
+      "source_take_group": null
+    }
+  ],
+  "audio_tracks": [],
+  "export_preset": "youtube_1080p",
+  "take_groups": [],
+  "history": [
+    {
+      "id": "eea60a85",
+      "name": "Screen Recording 2026-07-12 002843.mp4",
+      "clips": [],
+      "audio_tracks": [],
+      "export_preset": "youtube_1080p",
+      "take_groups": []
+    }
+  ],
+  "redo_stack": []
+}
